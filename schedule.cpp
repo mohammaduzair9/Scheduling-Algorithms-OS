@@ -42,8 +42,13 @@ void get_process_info(int selected_algo){
 			cout << "==> Execution time: ";
 			cin >> execution_time[i];
 			remain_time[i] = execution_time[i];
+			if (selected_algo == 4){
+				cout << "==> Deadline: ";
+				cin >> deadline[i];
+			} else {
 				cout << "==> Period: ";
 				cin >> period[i];
+			}
 		}
 	}
 }
@@ -73,6 +78,9 @@ int get_observation_time(int selected_algo){
 		return max(period[0],period[1],period[2]);
 	}
 
+	else if(selected_algo == 4){
+		return max(deadline[0], deadline[1], deadline[2]);
+	}
 }
 
 //print scheduling sequence
@@ -262,6 +270,85 @@ void rate_monotonic(int time){
 	print_schedule(process_list, time);
 }
 
+void earliest_deadline_first(int time){
+	float utilization = 0;
+	for (int i = 0; i < num_of_process; i++){
+		utilization += (1.0*execution_time[i])/deadline[i];
+	}
+	int n = num_of_process;
+	if (utilization > 1){
+		cout << endl << "Given problem is not schedulable under said scheduling algorithm." << endl;
+		exit(0);
+	}
+
+	int process[num_of_process];
+	int max_deadline, current_process=0, min_deadline,process_list[time];;
+	bool is_ready[num_of_process];
+
+	for(int i=0; i<num_of_process; i++){
+		is_ready[i] = true;
+		process[i] = i+1; 
+	}
+
+	max_deadline=deadline[0];
+	for(int i=1; i<num_of_process; i++){
+		if(deadline[i] > max_deadline)
+			max_deadline = deadline[i];
+	}
+
+	for(int i=0; i<num_of_process; i++){
+		for(int j=i+1; j<num_of_process; j++){	
+			if(deadline[j] < deadline[i]){
+				int temp = execution_time[j];
+				execution_time[j] = execution_time[i];
+				execution_time[i] = temp;
+				temp = deadline[j];
+				deadline[j] = deadline[i];
+				deadline[i] = temp;
+				temp = process[j];
+				process[j] = process[i];
+				process[i] = temp;
+			}
+		}
+	}
+
+	for(int i=0; i<num_of_process; i++){
+		remain_time[i] = execution_time[i];
+		remain_deadline[i] = deadline[i];
+	}
+
+	for (int t = 0; t < time; t++){
+		if(current_process != -1){		
+			--execution_time[current_process];
+			process_list[t] = process[current_process];
+		}	
+		else
+			process_list[t] = 0;
+	
+		for(int i=0;i<num_of_process;i++){
+			--deadline[i];
+			if((execution_time[i] == 0) && is_ready[i]){
+				deadline[i] += remain_deadline[i];
+				is_ready[i] = false;
+			}
+			if((deadline[i] <= remain_deadline[i]) && (is_ready[i] == false)){
+				execution_time[i] = remain_time[i];
+				is_ready[i] = true;
+			}
+		}
+	
+		min_deadline = max_deadline;		
+		current_process = -1;
+		for(int i=0;i<num_of_process;i++){
+			if((deadline[i] <= min_deadline) && (execution_time[i] > 0)){				
+				current_process = i;
+				min_deadline = deadline[i];
+			}
+		}
+	}	
+	print_schedule(process_list, time);
+}
+
 int main(int argc, char* argv[]) {
 	int option = 0;
 	cout << "-----------------------------" << endl;
@@ -270,6 +357,7 @@ int main(int argc, char* argv[]) {
 	cout << "1. First Come First Serve" << endl;
 	cout << "2. Round Robin" << endl;
 	cout << "3. Rate Monotonic Scheduling" << endl;
+	cout << "4. Earliest Deadline First" << endl;
 	cout << "-----------------------------" << endl;
 	cout << "Select > "; cin >> option;
 	cout << "-----------------------------" << endl;
@@ -283,5 +371,7 @@ int main(int argc, char* argv[]) {
 		round_robin(observation_time);
 	else if (option == 3)
 		rate_monotonic(observation_time);
+	else if (option == 4)
+		earliest_deadline_first(observation_time);
 	return 0;
 }
