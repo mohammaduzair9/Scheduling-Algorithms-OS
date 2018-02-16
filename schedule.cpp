@@ -38,29 +38,20 @@ void get_process_info(int selected_algo){
   			cin >> burst_time[i];
   			remain_time[i] = burst_time[i];
 		}
-		else if (selected_algo > 2){
-			cout << "==> Execution time: ";
-			cin >> execution_time[i];
-			remain_time[i] = execution_time[i];
-			if (selected_algo == 4){
-				cout << "==> Deadline: ";
-				cin >> deadline[i];
-			} else {
-				cout << "==> Period: ";
-				cin >> period[i];
-			}
-		}
 	}
 }
 
 //calculating the observation time for scheduling timeline
 int get_observation_time(int selected_algo){
+	if (selected_algo <= 2){
 		int sum=0;
 		for(int i=0; i<num_of_process; i++){
 			sum += burst_time[i];
 		}
 		return sum;
-	
+	}
+
+
 }
 
 //print scheduling sequence
@@ -132,12 +123,94 @@ void first_come_first_serve(int time){
     print_schedule(process_list,time);
 }
 
+void round_robin(int time){
+	int i, current_time = 0, temp_process, flag = 0, count = 0; 
+    int total_wait = 0, total_end = 0, process_list[time], process_cycle[time]={-1}; 
+    float avg_wait, avg_end;
+ 
+	temp_process = num_of_process; 
+            
+	printf("\nProcess ID\t\tBurst Time\t Wait Time\t Completion Time\n");
+	current_time = 0;  
+    	
+	for(i = 0; temp_process != 0;) { 
+		process_cycle[count] = current_time;
+		count++;
+        if(remain_time[i] <= time_quantum && remain_time[i] > 0) { 
+            current_time += remain_time[i]; 
+            remain_time[i] = 0; 
+            flag = 1; 
+        } 
+        else if(remain_time[i] > 0) { 
+            remain_time[i] -= time_quantum; 
+            current_time += time_quantum; 
+        }
+
+        if(remain_time[i] == 0 && flag == 1) { 
+            temp_process--; 
+            completion_time[i] = current_time - arrival_time[i];
+            printf("\nProcess[%d]\t\t%d\t\t %d\t\t\t %d", i + 1, burst_time[i], current_time - arrival_time[i] - burst_time[i], current_time - arrival_time[i]);
+            total_wait = total_wait + current_time - arrival_time[i] - burst_time[i]; 
+            total_end = total_end + current_time - arrival_time[i]; 
+            flag = 0; 
+        } 
+        if(i == num_of_process - 1){
+            i = 0; 
+        }
+        else if(arrival_time[i + 1] <= current_time){
+            i++;
+        }
+        else{
+            i = 0;
+        }
+    }
+  	avg_wait = (float)total_wait / num_of_process;
+  	avg_end = (float)total_end / num_of_process;
+  	printf("\n\nAverage Waiting Time:\t%f", avg_wait); 
+  	printf("\nAverage Completion Time:\t%f\n", avg_end);
+
+  	//calculating process list
+  	int proc = 0, update_process_cycle[time]={0};
+    for (i=0,count=0; i<time; i++){
+    	if (i == time - 1){
+    		update_process_cycle[count] = process_cycle[i];
+    	}
+    	else if (process_cycle[i] != process_cycle[i+1]){
+    		update_process_cycle[count] = process_cycle[i];
+    		count++;
+    	} 
+    }
+    
+    update_process_cycle[count] = current_time; //adding last completion time    
+
+    for (i = 1; i < count+2; i++){
+		for (int j=0; j < (update_process_cycle[i]-update_process_cycle[i-1]); j++){
+			process_list[j+update_process_cycle[i-1]] = proc+1;
+		}
+
+		proc++;
+
+		if (proc == num_of_process)
+			proc = 0;
+		while (completion_time[proc] < update_process_cycle[i]){
+			proc++;
+			if (proc > 4)
+				proc = 0;
+		}
+	}
+
+    //printing schedule
+	print_schedule(process_list,time);
+}
+
+
 int main(int argc, char* argv[]) {
 	int option = 0;
 	cout << "-----------------------------" << endl;
 	cout << "CPU Scheduling Algorithms: " << endl;
 	cout << "-----------------------------" << endl;
 	cout << "1. First Come First Serve" << endl;
+	cout << "2. Round Robin" << endl;
 	cout << "-----------------------------" << endl;
 	cout << "Select > "; cin >> option;
 	cout << "-----------------------------" << endl;
@@ -147,5 +220,7 @@ int main(int argc, char* argv[]) {
 
 	if (option == 1)
 	 	first_come_first_serve(observation_time);
+	else if (option == 2)
+		round_robin(observation_time);
 	return 0;
 }
